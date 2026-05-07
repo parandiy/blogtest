@@ -5,70 +5,23 @@ declare(strict_types=1);
 namespace App;
 
 use App\Core\View;
+use App\Service\BlogService;
 
 class Controller
 {
-    private const PER_PAGE     = 6;
+    private const PER_PAGE = 6;
     private const SORT_ALLOWED = ['date', 'views'];
+
+    private BlogService $blogService;
+
+    public function __construct()
+    {
+        $this->blogService = new BlogService();
+    }
 
     public function home(): void
     {
-        $categories = [
-            [
-                'name' => 'Test 1',
-                'slug' => 'test-1',
-                'posts' => [
-                [
-                    'slug' => 'test-1-post-1',
-                    'title' => 'Test 1 Post 1',
-                    'image' => 'https://placehold.co/150',
-                    'published_at' => '2023-01-01 00:00:00',
-                    'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-                ],
-                    [
-                        'slug' => 'test-1-post-1',
-                        'title' => 'Test 1 Post 1',
-                        'image' => 'https://placehold.co/150',
-                        'published_at' => '2023-01-01 00:00:00',
-                        'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-                    ],
-                    [
-                        'slug' => 'test-1-post-1',
-                        'title' => 'Test 1 Post 1',
-                        'image' => 'https://placehold.co/150',
-                        'published_at' => '2023-01-01 00:00:00',
-                        'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-                    ]
-                ],
-            ],
-            [
-                'name' => 'Test 2',
-                'slug' => 'test-2',
-                'posts' => [
-                    [
-                        'slug' => 'test-1-post-1',
-                        'title' => 'Test 1 Post 1',
-                        'image' => 'https://placehold.co/150',
-                        'published_at' => '2023-01-01 00:00:00',
-                        'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-                    ],
-                    [
-                        'slug' => 'test-1-post-1',
-                        'title' => 'Test 1 Post 1',
-                        'image' => 'https://placehold.co/150',
-                        'published_at' => '2023-01-01 00:00:00',
-                        'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-                    ],
-                    [
-                        'slug' => 'test-1-post-1',
-                        'title' => 'Test 1 Post 1',
-                        'image' => 'https://placehold.co/150',
-                        'published_at' => '2023-01-01 00:00:00',
-                        'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-                    ]
-                ],
-            ]
-        ];
+        $categories = $this->blogService->getActiveWithLatestPosts();
 
         $view = new View();
         $view->assign('categories', $categories);
@@ -82,73 +35,66 @@ class Controller
             ? $_GET['sort']
             : 'date';
 
-        $category = [
-            'name' => 'Test 1',
-            'slug' => 'test-1',
-            'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-        ];
+        $category = $this->blogService->findCategoryBySlug($slug);
 
-        $posts = [
-            [
-                'slug' => 'test-1-post-1',
-                'title' => 'Test 1 Post 1',
-                'image' => 'https://placehold.co/150',
-                'published_at' => '2023-01-01 00:00:00',
-                'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-            ],
-            [
-                'slug' => 'test-1-post-1',
-                'title' => 'Test 1 Post 1',
-                'image' => 'https://placehold.co/150',
-                'published_at' => '2023-01-01 00:00:00',
-                'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-            ],
-            [
-                'slug' => 'test-1-post-1',
-                'title' => 'Test 1 Post 1',
-                'image' => 'https://placehold.co/150',
-                'published_at' => '2023-01-01 00:00:00',
-                'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-            ]
-        ];
+        if (!$category) {
+            $this->notFound();
+            return;
+        }
 
-        $total = 18;
-        $perPage = 4;
+        $total = $this->blogService->countPosts((int)$category['id']);
 
-        $currentPage = max(1, (int) ($_GET['page'] ?? 1));
-        $lastPage    = max(1, (int) ceil($total / $perPage));
+        $currentPage = max(1, (int)($_GET['page'] ?? 1));
+        $lastPage = max(1, (int)ceil($total / self::PER_PAGE));
         $currentPage = min($currentPage, $lastPage);
-        $offset      = ($currentPage - 1) * $perPage;
+        $offset = ($currentPage - 1) * self::PER_PAGE;
         $start = max(1, $currentPage - 2);
-        $end   = min($lastPage, $currentPage + 2);
+        $end = min($lastPage, $currentPage + 2);
 
-        echo $end;
+        $posts = $this->blogService->getPosts(
+            categoryId: (int)$category['id'],
+            sortBy: $sortBy,
+            limit: self::PER_PAGE,
+            offset: $offset,
+        );
 
         $view = new View();
         $view->assign([
-            'category'   => $category,
-            'posts'      => $posts,
-            'sortBy'     => $sortBy,
-            'pagination' => compact('currentPage', 'perPage', 'total', 'lastPage', 'offset', 'start', 'end'),
-            'pageTitle'  => $category['name'],
+            'category' => $category,
+            'posts' => $posts,
+            'sortBy' => $sortBy,
+            'pagination' => [
+                'currentPage' => $currentPage,
+                'lastPage' => $lastPage,
+                'start' => $start,
+                'end' => $end,
+                'total' => $total,
+                'perPage' => self::PER_PAGE,
+                'offset' => $offset
+
+            ],
+            'pageTitle' => $category['name'],
         ]);
         $view->render('pages/category.tpl');
     }
 
     public function post(string $slug): void
     {
-        $post = [
-            'slug' => 'test-1-post-1',
-            'title' => 'Test 1 Post 1',
-            'image' => 'https://placehold.co/150',
-            'published_at' => '2023-01-01 00:00:00',
-            'views' => 100,
-            'body' => 'fdd',
-            'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.',
-        ];
+        $post = $this->blogService->findPostBySlug($slug);
+
+        if (!$post) {
+            $this->notFound();
+            return;
+        }
+
+        $related = $this->blogService->getRelatedPosts($post['id']);
 
         $view = new View();
-        $view->assign('post', $post);
+        $view->assign([
+            'post' => $post,
+            'related' => $related,
+        ]);
+
         $view->render('pages/post.tpl');
     }
 

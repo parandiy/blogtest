@@ -1,7 +1,7 @@
 <article class="post-card">
     {if $post.image}
         <a href="{$APP_URL}/post/{$post.slug}">
-            <img src="{$post.image}" alt="{$post.title|escape}" class="post-card__image" loading="lazy">
+            <img src="{$APP_URL}/{$post.image}" alt="{$post.title|escape}" class="post-card__image" loading="lazy">
         </a>
     {/if}
 

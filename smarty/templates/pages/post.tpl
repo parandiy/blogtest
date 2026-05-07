@@ -15,7 +15,7 @@
         </div>
 
         {if $post.image}
-            <img src="{$post.image}" alt="{$post.title|escape}" class="post-full__cover">
+            <img src="{$APP_URL}/{$post.image}" alt="{$post.title|escape}" class="post-full__cover">
         {/if}
 
         <div class="post-full__meta">
